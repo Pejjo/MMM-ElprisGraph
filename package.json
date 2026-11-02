@@ -17,6 +17,6 @@
     "chart.min.js": "^1.2.3-0",
     "chartjs-plugin-annotation": "latest",
     "request": "^2.88.2",
-    "ripemd160": "latest"
+    "ripemd160": "^2.0.3"
   }
 }
