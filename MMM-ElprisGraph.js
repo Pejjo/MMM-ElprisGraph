@@ -28,7 +28,7 @@ Module.register("MMM-ElprisGraph",{
 
 	// Define required scripts.
 	getScripts: function() {
-		return ["moment.js", 
+		return ["moment.js",
 //			"https://cdn.jsdelivr.net/npm/chart.js",
 			this.file("node_modules/chart.js/dist/chart.umd.js"),
 			this.file("node_modules/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.js")
@@ -57,29 +57,14 @@ Module.register("MMM-ElprisGraph",{
 		}
 
 		this.sendSocketNotification("CONFIG", this.config);
-
-		var self = this;
-		this.refInterval = window.setInterval(function() {
-			//var sample;
-			
-//		for(var i = 0; i < 24; i++) {
-//			self.chartData.labels[i]=i;
-//			self.chartData.datasets[i]=0;
-//				
-//			}
-//			
-//			
-//
-//		self.updateChartData();
-
-			//if(++self.dataid >= self.config.samples.length) {
-			//	window.clearInterval(self.refInterval);
-			//}
-		}, 2000);
+		this.sendSocketNotification("REQ", null);
+		setInterval(() => {
+			this.sendSocketNotification("REQ", null);
+		}, this.config.refreshInterval || 5000);
 
 		//Log.log("Sending CONFIG to node_helper.js in " + this.name);
 		//Log.log("Payload: " + this.config);
-		
+
 	},
 
 	updateChartData: function() {
@@ -92,7 +77,7 @@ Module.register("MMM-ElprisGraph",{
 			this.chartData.datasets[i]=(this.pdata.data[i].price);
 		}
 //		Log.log(this.chartData)
-		if (typeof this.myChart !== 'undefined' && this.myChart !== null) {
+		if (this.myChart) {
 			//var dateAndTime = waterValue[0].getAttribute("time");
 			//var time = dateAndTime.split("T")[1];
 			//var hour = time.split(":")[0];
@@ -141,25 +126,30 @@ Module.register("MMM-ElprisGraph",{
 	// Override dom generator.
 	getDom: function() {
 
-		this.sendSocketNotification("CONFIG", this.config);
+		// this.sendSocketNotification("CONFIG", this.config);
 
-
-		var wrapper = document.createElement("div");
-		wrapper.className = "myChart";
-		this.ctx = document.createElement("canvas");
-
-		wrapper.appendChild(this.ctx);
 
 		if (!this.loaded) {
+			let wrapper = document.createElement("div");
 			wrapper.innerHTML = this.translate("LOADING");
 			Log.log("#LOADED");
 			return wrapper;
 		}
 
 		if (!this.pdata) {
+			let wrapper = document.createElement("div");
 			wrapper.innerHTML = "No data";
 			Log.log("#NODATA");
+			setTimeout(() => {
+				this.sendSocketNotification("REQ", null);
+			}, 500);
 			return wrapper;
+		}
+
+		if (!this.holder) {
+			this.ctx = document.createElement("canvas");
+			this.holder = document.createElement("div");
+			this.holder.appendChild(this.ctx);
 		}
 
 		//Log.log(waterValue);
@@ -174,102 +164,103 @@ Module.register("MMM-ElprisGraph",{
 		tableHeading.appendChild(floIcon);
 		wrapper.appendChild(tableHeading);
 */
-  		this.myChart = new Chart(this.ctx, {
-			type: "line",
-			data: {
-				labels: [],
-				datasets: [{
-					label: "Pris",
-					yAxisID: "y-axis-0",
-					borderColor: "rgba(255, 255, 255, 1)",
-					backgroundColor: "rgba(255, 255, 255, 1)",
-					fill: false,
-					data: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1],
+		if (!this.myChart) {
+			this.myChart = new Chart(this.ctx, {
+				type: "line",
+				data: {
+					labels: [],
+					datasets: [{
+						label: "Pris",
+						yAxisID: "y-axis-0",
+						borderColor: "rgba(255, 255, 255, 1)",
+						backgroundColor: "rgba(255, 255, 255, 1)",
+						fill: false,
+						data: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1],
+					},
+					]
 				},
-				]
-			},
-			options: {
-				responsive: false,
-				plugins: {
-					legend: {
-						display: false,
-						position: "right",
-					},
-//					tooltips: {
-//						mode: "x",
-//						callbacks: {
-//							title: function(ti, data) {
-//							},
-//						}
-//					},
-					elements: {
-						point: {
-							radius: 0,
-							hitRadius: 6,
-							hoverRadius: 6,
-						}
-					},
-//					annotation: {
-//						annotations: [
-//						  {
-//								type: "line",
-//								mode: "vertical",
-//								scaleID: "x-axis-0",
-//								value: String(new Date()),
-//								borderColor: "white",
-//								label: {
-//									content: "TODAY",
-//									enabled: false,
-//									position: "top"
-//								}
-//						  }]
-//					},
-	/*				scales: {
-						xAxes: [{
-							type: "time",//time,category,linear
-							gridLines: {
-								color: "rgba(255, 255, 255, 0.1)"
-							},
-							ticks:{
-								fontColor: "rgba(155, 155, 155, 1)",
-								autoSkip:true,
-								autoSkipPadding:3,
-							},
-							time: {
-								unit: "minute",//hour, minute
-								//unit: "quarter",
-								displayFormats: {
-								minute: "H:mm",
-								},
-							},
-						}],
-						yAxes: [{
-							position: "left",
-							id: "y-axis-0",
-							scaleLabel: {
-								display: false,
-								labelString: "cm"
-							},
-							gridLines: {
-								color: "rgba(255, 255, 255, 0.1)"
-							},
-							ticks: {
-								fontColor: "rgba(255, 255, 255, 1)",
-								callback: function(val) {
-									return val + " cm";
-								}
+				options: {
+					responsive: false,
+					plugins: {
+						legend: {
+							display: false,
+							position: "right",
+						},
+	//					tooltips: {
+	//						mode: "x",
+	//						callbacks: {
+	//							title: function(ti, data) {
+	//							},
+	//						}
+	//					},
+						elements: {
+							point: {
+								radius: 0,
+								hitRadius: 6,
+								hoverRadius: 6,
 							}
-						}]
-					}
-*/				}
-			}
-			
-		});
-		
-		
+						},
+	//					annotation: {
+	//						annotations: [
+	//						  {
+	//								type: "line",
+	//								mode: "vertical",
+	//								scaleID: "x-axis-0",
+	//								value: String(new Date()),
+	//								borderColor: "white",
+	//								label: {
+	//									content: "TODAY",
+	//									enabled: false,
+	//									position: "top"
+	//								}
+	//						  }]
+	//					},
+		/*				scales: {
+							xAxes: [{
+								type: "time",//time,category,linear
+								gridLines: {
+									color: "rgba(255, 255, 255, 0.1)"
+								},
+								ticks:{
+									fontColor: "rgba(155, 155, 155, 1)",
+									autoSkip:true,
+									autoSkipPadding:3,
+								},
+								time: {
+									unit: "minute",//hour, minute
+									//unit: "quarter",
+									displayFormats: {
+									minute: "H:mm",
+									},
+								},
+							}],
+							yAxes: [{
+								position: "left",
+								id: "y-axis-0",
+								scaleLabel: {
+									display: false,
+									labelString: "cm"
+								},
+								gridLines: {
+									color: "rgba(255, 255, 255, 0.1)"
+								},
+								ticks: {
+									fontColor: "rgba(255, 255, 255, 1)",
+									callback: function(val) {
+										return val + " cm";
+									}
+								}
+							}]
+						}
+	*/				}
+				}
+
+			});
+		}
+
 		this.updateChartData();
 
-		return wrapper;
+		return this.holder;
 	},
 
 	socketNotificationReceived: function(notification, payload) {
